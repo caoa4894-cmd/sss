@@ -139,7 +139,7 @@ function displayMessage(msg, id) {
 
     try {
         // 将 VAPID 公钥转换为 Uint8Array（替换为你的 VAPID 公钥）
-        const applicationServerKey = urlBase64ToUint8Array('你的VAPID公钥');
+        const applicationServerKey = urlBase64ToUint8Array('BOQmbWhCBDZ3iNBh8b-Yypr8ppk9nHVmJx03PFFlijqC5OkcLk8Znml37oQwbllX2cvQ0NSsJXlpo_ZpQfy-iMo');
 
         // 获取现有的订阅（如果有）
         let subscription = await window.pushManager.getSubscription();
@@ -210,3 +210,4 @@ async function saveSubscriptionToDatabase(subscription) {
 // 如果你希望在前台也处理推送，可以监听来自 FCM 的消息
 
 // 但这里我们主要依赖后台 Service Worker，所以省略
+
