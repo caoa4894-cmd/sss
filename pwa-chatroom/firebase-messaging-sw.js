@@ -2,14 +2,27 @@ importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
 // ⚠️ 替换为你的 Firebase 配置（与 app.js 相同）
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "AIzaSy...",
-    authDomain: "...",
-    projectId: "...",
-    storageBucket: "...",
-    messagingSenderId: "...",
-    appId: "..."
+  apiKey: "AIzaSyCZM5tLnB3FuDQZKl8rfcg_G2utQKwzke4",
+  authDomain: "minichat-e73dd.firebaseapp.com",
+  projectId: "minichat-e73dd",
+  storageBucket: "minichat-e73dd.firebasestorage.app",
+  messagingSenderId: "702728270281",
+  appId: "1:702728270281:web:5049608bb8a01ad20f7818",
+  measurementId: "G-0REK75WZ0V"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
@@ -63,4 +76,5 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
         clients.openWindow(urlToOpen)
     );
+
 });
