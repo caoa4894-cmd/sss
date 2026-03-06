@@ -37,12 +37,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
+// 初始化 Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // 启用离线持久化
 db.enablePersistence()
-    .catch(err => console.warn('离线持久化失败:', err));
+    .then(() => console.log('离线持久化已启用'))
+    .catch(err => {
+        if (err.code == 'failed-precondition') {
+            console.warn('多个标签页同时打开，离线持久化只能在单个标签页工作');
+        } else if (err.code == 'unimplemented') {
+            console.warn('当前浏览器不支持离线持久化');
+        }
+    });
 
 // ==================== DOM 元素 ====================
 const messagesDiv = document.getElementById('messages');
@@ -52,21 +60,26 @@ const sendBtn = document.getElementById('send-btn');
 // 启用输入框
 input.disabled = false;
 sendBtn.disabled = false;
+console.log('输入框和按钮已启用');
 
 // ==================== 实时消息监听 ====================
 db.collection('messages')
     .orderBy('timestamp', 'asc')
     .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-            if (change.type === 'added') {
-                const msg = change.doc.data();
-                displayMessage(msg, change.doc.id);
-            }
+        console.log('收到数据更新，消息数量:', snapshot.docs.length);
+        
+        // 清空并重新显示（简化版，避免重复）
+        messagesDiv.innerHTML = '';
+        
+        snapshot.docs.forEach(doc => {
+            const msg = doc.data();
+            displayMessage(msg, doc.id);
         });
+        
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }, error => {
         console.error('监听错误:', error);
-        alert('无法连接到聊天服务器，请检查网络。');
+        alert('无法连接到聊天服务器，请检查网络。错误：' + error.message);
     });
 
 // ==================== 发送消息 ====================
@@ -75,15 +88,17 @@ async function sendMessage() {
     if (!text) return;
 
     try {
+        console.log('正在发送消息:', text);
         await db.collection('messages').add({
             name: username,
             text: text,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         input.value = '';
+        console.log('消息发送成功');
     } catch (error) {
         console.error('发送失败:', error);
-        alert('发送失败，请稍后重试。');
+        alert('发送失败，请稍后重试。错误：' + error.message);
     }
 }
 
@@ -108,11 +123,11 @@ function displayMessage(msg, id) {
 
     const timeSpan = document.createElement('div');
     timeSpan.className = 'time';
-    if (msg.timestamp) {
+    if (msg.timestamp && msg.timestamp.toDate) {
         const date = msg.timestamp.toDate();
         timeSpan.textContent = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     } else {
-        timeSpan.textContent = '发送中...';
+        timeSpan.textContent = '刚刚';
     }
 
     msgElem.appendChild(nameSpan);
@@ -121,93 +136,19 @@ function displayMessage(msg, id) {
     messagesDiv.appendChild(msgElem);
 }
 
-// ==================== 声明式网页推送（iOS 18.4+） ====================
-// 注意：此功能需要 HTTPS 环境，且用户必须将网页添加到主屏幕后从主屏幕打开
-(async function initPush() {
-    // 检查浏览器是否支持 pushManager
-    if (!window.PushManager) {
-        console.log('当前浏览器不支持推送通知');
-        return;
-    }
-
-    // 检查是否已授予通知权限
-    if (Notification.permission !== 'granted') {
-        console.log('尚未授予通知权限');
-        // 可以在这里显示一个提示按钮
-        return;
-    }
-
-    try {
-        // 将 VAPID 公钥转换为 Uint8Array（替换为你的 VAPID 公钥）
-        const applicationServerKey = urlBase64ToUint8Array('BOQmbWhCBDZ3iNBh8b-Yypr8ppk9nHVmJx03PFFlijqC5OkcLk8Znml37oQwbllX2cvQ0NSsJXlpo_ZpQfy-iMo');
-
-        // 获取现有的订阅（如果有）
-        let subscription = await window.pushManager.getSubscription();
-        
-        if (!subscription) {
-            // 没有订阅，则创建一个新的
-            subscription = await window.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: applicationServerKey
-            });
-            console.log('新订阅创建成功', subscription);
-        } else {
-            console.log('已有订阅', subscription);
-        }
-
-        // 将订阅保存到 Firestore（与当前用户关联）
-        await saveSubscriptionToDatabase(subscription);
-    } catch (error) {
-        console.error('推送订阅失败:', error);
-    }
-})();
+// ==================== 推送通知相关（暂时注释掉，先确保基础功能）====================
+/*
+// 检查浏览器是否支持推送
+if ('Notification' in window) {
+    console.log('浏览器支持通知');
+}
 
 // 如果页面上有“开启通知”按钮，可以绑定点击事件
 const enableBtn = document.getElementById('enable-notifications-btn');
 if (enableBtn) {
     enableBtn.addEventListener('click', async () => {
         const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            // 重新初始化推送
-            initPush();
-        }
+        console.log('通知权限:', permission);
     });
 }
-
-// 辅助函数：将 base64 字符串转换为 Uint8Array
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
-    
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-// 将推送订阅保存到 Firestore
-async function saveSubscriptionToDatabase(subscription) {
-    const subscriptionData = {
-        endpoint: subscription.endpoint,
-        keys: subscription.toJSON().keys,
-        userAgent: navigator.userAgent,
-        lastUsed: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    // 以用户名为文档ID，存储该用户的所有订阅
-    const userRef = db.collection('pushSubscriptions').doc(username);
-    await userRef.set({
-        subscriptions: firebase.firestore.FieldValue.arrayUnion(subscriptionData)
-    }, { merge: true });
-}
-
-// ==================== 接收前台消息（可选） ====================
-// 如果你希望在前台也处理推送，可以监听来自 FCM 的消息
-
-// 但这里我们主要依赖后台 Service Worker，所以省略
-
+*/
