@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PWA 聊天室</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <!-- iOS 专用 meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>PWA 聊天室</h1>
+            <button id="name-btn">修改昵称</button>
+        </header>
+
+        <main id="message-area">
+            <div id="messages"></div>
+        </main>
+
+        <footer>
+            <input type="text" id="message-input" placeholder="输入消息..." disabled>
+            <button id="send-btn" disabled>发送</button>
+        </footer>
+    </div>
+
+    <!-- 引入 Firebase SDK (兼容模式) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- 我们的应用逻辑 -->
+    <script src="app.js"></script>
+    <!-- 注册 Service Worker (缓存 + 推送) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // 注册缓存 Service Worker
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('缓存 SW 注册成功:', reg))
+                    .catch(err => console.log('缓存 SW 注册失败:', err));
+                
+                // 注册推送 Service Worker（兼容传统推送）
+                navigator.serviceWorker.register('./firebase-messaging-sw.js')
+                    .then(reg => console.log('推送 SW 注册成功:', reg))
+                    .catch(err => console.log('推送 SW 注册失败:', err));
+            });
+        }
+    </script>
+</body>
+</html>
